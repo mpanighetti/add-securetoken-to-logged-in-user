@@ -6,8 +6,8 @@
 #     Description:  Adds SecureToken to currently logged-in user, allowing that
 #                   user to unlock FileVault in macOS High Sierra. Uses
 #                   credentials from a GUI-created admin account $guiAdmin
-#                   (retrieves from a manually-created System keychain), and
-#                   prompts for current user's password.
+#                   (retrieves from a manually-created System keychain entry),
+#                   and prompts for current user's password.
 #          Author:  Mario Panighetti
 #         Created:  2017-10-04
 #   Last Modified:  2017-10-04
@@ -39,8 +39,8 @@ securetoken_add () {
   # This sample script assumes that the $guiAdmin account credentials have
   # already been saved in the System keychain in an entry named "$guiAdmin".
   # If you want to prompt for this information instead of pulling from the
-  # keychain, you can copy the below osascript to a new function and pass the
-  # result to $guiAdminPass.
+  # keychain, you can copy the below osascript to generate a new prompt, and
+  # pass the result to $guiAdminPass.
   guiAdminPass=$(sudo "/usr/bin/security" find-generic-password -wa "$guiAdmin")
   loggedInUserPass=$("/usr/bin/osascript" <<EOT
 tell application "System Events"
