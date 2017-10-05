@@ -8,6 +8,7 @@
 #                   credentials from a GUI-created admin account $guiAdmin
 #                   (retrieves from a manually-created System keychain entry),
 #                   and prompts for current user's password.
+#                   https://github.com/mpanighetti/add-securetoken-to-logged-in-user
 #          Author:  Mario Panighetti
 #         Created:  2017-10-04
 #   Last Modified:  2017-10-04
