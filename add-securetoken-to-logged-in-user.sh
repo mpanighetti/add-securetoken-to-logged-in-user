@@ -42,6 +42,7 @@ securetoken_add () {
   # keychain, you can copy the below osascript to generate a new prompt, and
   # pass the result to $guiAdminPass.
   guiAdminPass=$(sudo "/usr/bin/security" find-generic-password -wa "$guiAdmin")
+  # https://stackoverflow.com/a/17816746
   loggedInUserPass=$("/usr/bin/osascript" <<EOT
 tell application "System Events"
   with timeout of 86400 seconds
