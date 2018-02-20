@@ -11,8 +11,8 @@
 #                   https://github.com/mpanighetti/add-securetoken-to-logged-in-user
 #          Author:  Mario Panighetti
 #         Created:  2017-10-04
-#   Last Modified:  2017-10-04
-#         Version:  1.0
+#   Last Modified:  2018-02-20
+#         Version:  2.0
 #
 ###
 
@@ -25,9 +25,17 @@
 # replace with username of a GUI-created admin account
 # (or any admin user with SecureToken access)
 guiAdmin="guiadmin-username"
+# This sample script assumes that the $guiAdmin account credentials have
+# already been saved in the System keychain in an entry named "$guiAdmin".
+# If you want to prompt for this information instead of pulling from the
+# keychain, you can copy the osascript from securetoken_add to generate a new
+# prompt, and pass the result to $guiAdminPass.
+guiAdminPass=$("/usr/bin/sudo" "/usr/bin/security" find-generic-password -wa "$guiAdmin")
 # leave these values as-is
 loggedInUser=$("/usr/bin/stat" -f%Su "/dev/console")
-secureTokenCheck=$(sudo "/usr/sbin/sysadminctl" -secureTokenStatus "$loggedInUser" 2>&1)
+secureTokenCheck=$("/usr/bin/sudo" "/usr/sbin/sysadminctl" -adminUser "$guiAdmin" -adminPassword "$guiAdminPass" -secureTokenStatus "$loggedInUser" 2>&1)
+macosMinor=$("/usr/bin/sw_vers" -productVersion | "/usr/bin/awk" -F . '{print $2}')
+macosBuild=$("/usr/bin/sw_vers" -productVersion | "/usr/bin/awk" -F . '{print $3}')
 
 
 
@@ -35,14 +43,17 @@ secureTokenCheck=$(sudo "/usr/sbin/sysadminctl" -secureTokenStatus "$loggedInUse
 
 
 
+# exit script if macOS < 10.13.3
+macos_check () {
+  if [[ "$macosMinor" -ne 13 ]] || [[ "$macosBuild" -lt 3 ]]; then
+    "/bin/echo" "❌ ERROR: Mac does not meet script requirements (macOS 10.13.3 or later). Update to the latest compatible macOS build, then run script again."
+    exit 70
+  fi
+}
+
+
 # add SecureToken to $loggedInUser account to allow FileVault access
 securetoken_add () {
-  # This sample script assumes that the $guiAdmin account credentials have
-  # already been saved in the System keychain in an entry named "$guiAdmin".
-  # If you want to prompt for this information instead of pulling from the
-  # keychain, you can copy the below osascript to generate a new prompt, and
-  # pass the result to $guiAdminPass.
-  guiAdminPass=$(sudo "/usr/bin/security" find-generic-password -wa "$guiAdmin")
   # https://stackoverflow.com/a/17816746
   loggedInUserPass=$("/usr/bin/osascript" <<EOT
 tell application "System Events"
@@ -65,7 +76,7 @@ end tell
 set myReply to final_pass
 EOT
     )
-  sudo "/usr/sbin/sysadminctl" \
+  "/usr/bin/sudo" "/usr/sbin/sysadminctl" \
     -adminUser "$guiAdmin" \
     -adminPassword "$guiAdminPass" \
     -secureTokenOn "$loggedInUser" \
@@ -74,19 +85,23 @@ EOT
 
 
 securetoken_double_check () {
-  secureTokenCheck=$(sudo "/usr/sbin/sysadminctl" -secureTokenStatus "$loggedInUser" 2>&1)
+  secureTokenCheck=$("/usr/bin/sudo" "/usr/sbin/sysadminctl" -adminUser "$guiAdmin" -adminPassword "$guiAdminPass" -secureTokenStatus "$loggedInUser" 2>&1)
   if [[ "$secureTokenCheck" =~ "DISABLED" ]]; then
-    echo "❌ ERROR: Failed to add SecureToken to $loggedInUser for FileVault access."
-    exit 1
+    "/bin/echo" "❌ ERROR: Failed to add SecureToken to $loggedInUser for FileVault access."
+    cred_clear
+    exit 126
   else
-    securetoken_success
+    "/bin/echo" "✅ Verified SecureToken is enabled for $loggedInUser."
+    cred_clear
   fi
 }
 
 
-securetoken_success () {
-  echo "✅ Verified SecureToken is enabled for $loggedInUser."
-  sudo "/usr/bin/security" delete-generic-password -a "$guiAdmin"
+cred_clear () {
+  "/bin/echo" "Removing stored credentials and clearing password variables..."
+  "/usr/bin/sudo" "/usr/bin/security" delete-generic-password -a "$guiAdmin"
+  unset guiAdminPass
+  unset loggedInUserPass
 }
 
 
@@ -95,12 +110,16 @@ securetoken_success () {
 
 
 
+# verify Mac meets system requirements
+macos_check
+
 # add SecureToken to $loggedInUser if missing
 if [[ "$secureTokenCheck" =~ "DISABLED" ]]; then
   securetoken_add
   securetoken_double_check
 else
-  securetoken_success
+  "/bin/echo" "✅ Verified SecureToken is enabled for $loggedInUser."
+  cred_clear
 fi
 
 
