@@ -2,7 +2,7 @@
 
 Adds SecureToken to currently logged-in user, allowing that user to unlock FileVault in macOS High Sierra. Uses credentials from a GUI-created admin account (retrieves from a manually-created System keychain entry), and prompts for current user's password.
 
-This workflow is currently required to authorize programmatically-created user accounts (e.g. Active Directory users created with `createmobileaccount`) to be added to FileVault in macOS High Sierra.
+This workflow is currently required to authorize programmatically-created user accounts (e.g. Active Directory users created with `createmobileaccount`) to enable or use FileVault on APFS-formatted startup volumes in macOS High Sierra.
 
 ## Credits
 
