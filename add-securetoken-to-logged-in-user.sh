@@ -11,8 +11,8 @@
 #                   https://github.com/mpanighetti/add-securetoken-to-logged-in-user
 #          Author:  Mario Panighetti
 #         Created:  2017-10-04
-#   Last Modified:  2018-02-20
-#         Version:  2.0
+#   Last Modified:  2018-03-12
+#         Version:  2.1
 #
 ###
 
@@ -76,11 +76,15 @@ end tell
 set myReply to final_pass
 EOT
     )
-  "/usr/bin/sudo" "/usr/sbin/sysadminctl" \
-    -adminUser "$guiAdmin" \
-    -adminPassword "$guiAdminPass" \
-    -secureTokenOn "$loggedInUser" \
-    -password "$loggedInUserPass"
+  if [[ "$loggedInUserPass" = "" ]]; then
+     "/bin/echo" "A password was not entered for $loggedInUser, unable to proceed. Try running the script again; if issue persists, a manual SecureToken add will be required."
+  else
+    "/usr/bin/sudo" "/usr/sbin/sysadminctl" \
+      -adminUser "$guiAdmin" \
+      -adminPassword "$guiAdminPass" \
+      -secureTokenOn "$loggedInUser" \
+      -password "$loggedInUserPass"
+  fi
 }
 
 
@@ -88,18 +92,28 @@ securetoken_double_check () {
   secureTokenCheck=$("/usr/bin/sudo" "/usr/sbin/sysadminctl" -adminUser "$guiAdmin" -adminPassword "$guiAdminPass" -secureTokenStatus "$loggedInUser" 2>&1)
   if [[ "$secureTokenCheck" =~ "DISABLED" ]]; then
     "/bin/echo" "❌ ERROR: Failed to add SecureToken to $loggedInUser for FileVault access."
-    cred_clear
+    pass_clear
     exit 126
-  else
+  elif [[ "$secureTokenCheck" =~ "ENABLED" ]]; then
     "/bin/echo" "✅ Verified SecureToken is enabled for $loggedInUser."
     cred_clear
+  else
+    "/bin/echo" "❌ ERROR: Unexpected result, unable to proceed. Try running the script again; if issue persists, a manual SecureToken add will be required."
+    pass_clear
+    exit 1
   fi
 }
 
 
 cred_clear () {
-  "/bin/echo" "Removing stored credentials and clearing password variables..."
+  "/bin/echo" "Removing stored credentials..."
   "/usr/bin/sudo" "/usr/bin/security" delete-generic-password -a "$guiAdmin"
+  pass_clear
+}
+
+
+pass_clear () {
+  "/bin/echo" "Clearing password variables..."
   unset guiAdminPass
   unset loggedInUserPass
 }
