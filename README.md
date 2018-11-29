@@ -1,10 +1,9 @@
 # add-securetoken-to-logged-in-user
 
-Adds SecureToken to currently logged-in user, allowing that user to unlock FileVault in macOS High Sierra. Uses credentials from a GUI-created admin account (retrieves from a manually-created System keychain entry), and prompts for current user's password.
+Adds SecureToken to currently logged-in user, allowing that user to unlock, enable, or disable FileVault on APFS volumes in macOS High Sierra or later. Prompts for password of SecureToken admin (gets the username from a Jamf script parameter) and logged-in user.
 
-This workflow is currently required to authorize programmatically-created user accounts (that were not already explicitly given a SecureToken) to enable or use FileVault on APFS-formatted startup volumes in macOS High Sierra.
+This workflow is currently required to authorize programmatically-created user accounts (that were not already explicitly given a SecureToken) to enable or use FileVault on APFS-formatted startup volumes in macOS High Sierra or later.
 
 ## Credits
 
 - `sysadminctl` SecureToken syntax discovered and formalized in [MacAdmins Slack](https://macadmins.slack.com) #filevault.
-- AppleScript password prompt snippet found in [Stack Overflow answer](https://stackoverflow.com/a/17816746) from [scohe001](https://stackoverflow.com/users/2602718/scohe001).
