@@ -65,7 +65,7 @@ function check_securetoken_admin {
     "/bin/echo" "$secureTokenAdmin does not have a valid SecureToken, unable to proceed. Please update Jamf Pro policy to target another admin user with SecureToken."
     exit 1
   else
-    "/bin/echo" "Verified $secureTokenAdmin has SecureToken."
+    "/bin/echo" "✅ Verified $secureTokenAdmin has SecureToken."
   fi
 }
 
@@ -110,7 +110,7 @@ function securetoken_add {
     "/bin/echo" "❌ ERROR: Failed to add SecureToken to $3. Please rerun policy; if issue persists, a manual SecureToken add will be required to continue."
     exit 126
   elif [[ "$secureTokenCheck" =~ "ENABLED" ]]; then
-    "/bin/echo" "✅ Verified SecureToken is enabled for $3."
+    "/bin/echo" "SecureToken add successful."
   else
     "/bin/echo" "❌ ERROR: Unexpected result, unable to proceed. Please rerun policy; if issue persists, a manual SecureToken add will be required to continue."
     exit 1
@@ -157,6 +157,10 @@ while [[ $("/usr/sbin/sysadminctl" -secureTokenStatus "$loggedInUser" 2>&1) =~ "
   securetoken_add "$secureTokenAdmin" "$secureTokenAdminPass" "$loggedInUser" "$loggedInUserPass"
 
 done
+
+
+# echo successful result
+"/bin/echo" "✅ Verified SecureToken is enabled for $loggedInUser."
 
 
 
