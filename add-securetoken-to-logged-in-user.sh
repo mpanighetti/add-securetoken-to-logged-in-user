@@ -10,7 +10,7 @@
 #          Author:  Mario Panighetti
 #         Created:  2017-10-04
 #   Last Modified:  2019-02-21
-#         Version:  3.0.1
+#         Version:  3.0.2
 #
 ###
 
@@ -22,7 +22,7 @@
 
 # local admin account with SecureToken access
 # Jamf Pro script parameter "SecureToken Admin Username"
-securetokenAdmin="$5"
+secureTokenAdmin="$5"
 # need a default password value so the initial logic loops will properly fail when validating password
 targetUserPass="foo"
 # leave these values as-is
@@ -39,10 +39,10 @@ macosBuild=$("/usr/bin/sw_vers" -productVersion | "/usr/bin/awk" -F . '{print $3
 #exit with error if any required Jamf Pro arguments are undefined
 check_jamf_arguments () {
   jamfArguments=(
-    "$securetokenAdmin"
+    "$secureTokenAdmin"
   )
   for argument in "${jamfArguments[@]}"; do
-    if [[ "$argument" = "" ]]; then
+    if [[ -z "$argument" ]]; then
       "/bin/echo" "❌ ERROR: Undefined Jamf Pro argument, unable to proceed."
       exit 74
     fi
@@ -140,11 +140,11 @@ while [[ $("/usr/sbin/sysadminctl" -secureTokenStatus "$loggedInUser" 2>&1) =~ "
 
   # get $secureTokenAdmin password
   "/bin/echo" "$loggedInUser missing SecureToken, prompting for credentials..."
-  while [[ $("/usr/bin/dscl" "/Local/Default" authonly "$securetokenAdmin" "$targetUserPass" > "/dev/null" 2>&1; "/bin/echo" $?) -ne 0 ]]; do
-    local_account_password_prompt "$securetokenAdmin" ". User's credentials are needed to grant a SecureToken to $loggedInUser."
-    local_account_password_validation "$securetokenAdmin" "$targetUserPass"
+  while [[ $("/usr/bin/dscl" "/Local/Default" authonly "$secureTokenAdmin" "$targetUserPass" > "/dev/null" 2>&1; "/bin/echo" $?) -ne 0 ]]; do
+    local_account_password_prompt "$secureTokenAdmin" ". User's credentials are needed to grant a SecureToken to $loggedInUser."
+    local_account_password_validation "$secureTokenAdmin" "$targetUserPass"
   done
-  securetokenAdminPass="$targetUserPass"
+  secureTokenAdminPass="$targetUserPass"
 
   # get $loggedInUser password
   while [[ $("/usr/bin/dscl" "/Local/Default" authonly "$loggedInUser" "$targetUserPass" > "/dev/null" 2>&1; "/bin/echo" $?) -ne 0 ]]; do
@@ -154,7 +154,7 @@ while [[ $("/usr/sbin/sysadminctl" -secureTokenStatus "$loggedInUser" 2>&1) =~ "
   loggedInUserPass="$targetUserPass"
 
   # add SecureToken using provided credentials
-  securetoken_add "$securetokenAdmin" "$securetokenAdminPass" "$loggedInUser" "$loggedInUserPass"
+  securetoken_add "$secureTokenAdmin" "$secureTokenAdminPass" "$loggedInUser" "$loggedInUserPass"
 
 done
 
