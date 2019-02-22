@@ -2,7 +2,7 @@
 
 ###
 #
-#            Name:  add-securetoken-to-logged-in-user.sh
+#            Name:  Add SecureToken to Logged-In User.sh
 #     Description:  Adds SecureToken to currently logged-in user. Prompts for
 #                   password of SecureToken admin (gets SecureToken Admin
 #                   Username from Jamf Pro script parameter) and logged-in user.
