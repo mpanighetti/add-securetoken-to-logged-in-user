@@ -37,7 +37,7 @@ macosBuild=$("/usr/bin/sw_vers" -productVersion | "/usr/bin/awk" -F . '{print $3
 
 
 #exit with error if any required Jamf Pro arguments are undefined
-check_jamf_arguments () {
+function check_jamf_arguments {
   jamfArguments=(
     "$secureTokenAdmin"
   )
@@ -51,7 +51,7 @@ check_jamf_arguments () {
 
 
 # exit if macOS < 10.13.4
-check_macos () {
+function check_macos {
   if [[ "$macosMinor" -lt 13 || ( "$macosMinor" -eq 13 && "$macosBuild" -lt 4 ) ]]; then
     "/bin/echo" "SecureToken is only applicable in macOS 10.13.4 or later. No action required."
     exit 0
@@ -60,7 +60,7 @@ check_macos () {
 
 
 # exit with error if $secureTokenAdmin does not have SecureToken
-check_securetoken_admin () {
+function check_securetoken_admin {
   if [[ $("/usr/sbin/sysadminctl" -secureTokenStatus "$secureTokenAdmin" 2>&1) =~ "DISABLED" ]]; then
     "/bin/echo" "$secureTokenAdmin does not have a valid SecureToken, unable to proceed. Please update Jamf Pro policy to target another admin user with SecureToken."
     exit 1
@@ -70,7 +70,7 @@ check_securetoken_admin () {
 }
 
 
-local_account_password_prompt () {
+function local_account_password_prompt {
   targetUserPass=$("/usr/bin/osascript" <<EOT
 tell application "System Events"
   activate
@@ -86,7 +86,7 @@ EOT
 }
 
 
-local_account_password_validation () {
+function local_account_password_validation {
   passwordVerify=$("/usr/bin/dscl" /Local/Default authonly "$1" "$2" > "/dev/null" 2>&1; "/bin/echo" $?)
   if [[ "$passwordVerify" -eq 0 ]]; then
     "/bin/echo" "✅ Password successfully validated for $1."
@@ -97,7 +97,7 @@ local_account_password_validation () {
 
 
 # add SecureToken to target user
-securetoken_add () {
+function securetoken_add {
   "/usr/sbin/sysadminctl" \
     -adminUser "$1" \
     -adminPassword "$2" \
