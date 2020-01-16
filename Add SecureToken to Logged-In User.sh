@@ -9,8 +9,8 @@
 #                   https://github.com/mpanighetti/add-securetoken-to-logged-in-user
 #          Author:  Mario Panighetti
 #         Created:  2017-10-04
-#   Last Modified:  2019-10-16
-#         Version:  3.1
+#   Last Modified:  2020-01-15
+#         Version:  3.2
 #
 ###
 
@@ -42,19 +42,17 @@ function check_jamf_pro_arguments {
   jamfProArguments=(
     "$secureTokenAdmin"
   )
-  for argument in "${jamfProArguments[@]}"; do
-    if [[ -z "$argument" ]]; then
-      /bin/echo "❌ ERROR: Undefined Jamf Pro argument, unable to proceed."
-      exit 74
-    fi
-  done
+  if [[ -z "$secureTokenAdmin" ]]; then
+    /bin/echo "❌ ERROR: Undefined Jamf Pro argument, unable to proceed."
+    exit 74
+  fi
 }
 
 
-# Exit if macOS < 10.13.4.
+# Exit if macOS < 10.13.4 or ≥ 10.15.0.
 function check_macos {
-  if [[ "$macosMinor" -lt 13 || ( "$macosMinor" -eq 13 && "$macosBuild" -lt 4 ) ]]; then
-    /bin/echo "SecureToken is only applicable in macOS 10.13.4 or later. No action required."
+  if [[ "$macosMinor" -lt 13 || "$macosMinor" -gt 14 || ( "$macosMinor" -eq 13 && "$macosBuild" -lt 4 ) ]]; then
+    /bin/echo "Applying SecureToken to the logged-in user via script is only applicable in macOS 10.13.4 through 10.14.6. No action required."
     exit 0
   fi
 }
