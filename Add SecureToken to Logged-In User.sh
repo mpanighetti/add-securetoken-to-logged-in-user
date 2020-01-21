@@ -9,8 +9,8 @@
 #                   https://github.com/mpanighetti/add-securetoken-to-logged-in-user
 #          Author:  Mario Panighetti
 #         Created:  2017-10-04
-#   Last Modified:  2020-01-15
-#         Version:  3.2
+#   Last Modified:  2020-01-20
+#         Version:  3.2.1
 #
 ###
 
@@ -39,9 +39,6 @@ macosBuild=$(/usr/bin/sw_vers -productVersion | /usr/bin/awk -F . '{print $3}')
 
 # Exit with error if any required Jamf Pro arguments are undefined.
 function check_jamf_pro_arguments {
-  jamfProArguments=(
-    "$secureTokenAdmin"
-  )
   if [[ -z "$secureTokenAdmin" ]]; then
     /bin/echo "❌ ERROR: Undefined Jamf Pro argument, unable to proceed."
     exit 74
@@ -49,10 +46,10 @@ function check_jamf_pro_arguments {
 }
 
 
-# Exit if macOS < 10.13.4 or ≥ 10.15.0.
+# Exit if macOS < 10.13.4.
 function check_macos {
-  if [[ "$macosMinor" -lt 13 || "$macosMinor" -gt 14 || ( "$macosMinor" -eq 13 && "$macosBuild" -lt 4 ) ]]; then
-    /bin/echo "Applying SecureToken to the logged-in user via script is only applicable in macOS 10.13.4 through 10.14.6. No action required."
+  if [[ "$macosMinor" -lt 13 || ( "$macosMinor" -eq 13 && "$macosBuild" -lt 4 ) ]]; then
+    /bin/echo "SecureToken is only applicable in macOS 10.13.4 or later. No action required."
     exit 0
   fi
 }
@@ -67,11 +64,17 @@ function check_securetoken_logged_in_user {
 }
 
 
-# Exit with error if $secureTokenAdmin does not have SecureToken.
+# Exit with error if $secureTokenAdmin does not have SecureToken
+# (unless running macOS 10.15 or later, in which case exit with explanation).
 function check_securetoken_admin {
   if [[ $(/usr/sbin/sysadminctl -secureTokenStatus "$secureTokenAdmin" 2>&1) =~ "DISABLED" ]]; then
-    /bin/echo "❌ ERROR: $secureTokenAdmin does not have a valid SecureToken, unable to proceed. Please update Jamf Pro policy to target another admin user with SecureToken."
-    exit 1
+    if [[ "$macosMinor" -gt 14 ]]; then
+      /bin/echo "⚠️ Neither $secureTokenAdmin nor $loggedInUser has a SecureToken, but in macOS 10.15 or later, a SecureToken is automatically granted to the first user to enable FileVault (if no other users have SecureToken), so this may not be necessary. Try enabling FileVault for $loggedInUser. If that fails, see what other user on the system has SecureToken, and use its credentials to grant SecureToken to $loggedInUser."
+      exit 0
+    else
+      /bin/echo "❌ ERROR: $secureTokenAdmin does not have a valid SecureToken, unable to proceed. Please update Jamf Pro policy to target another admin user with SecureToken."
+      exit 1
+    fi
   else
     /bin/echo "✅ Verified $secureTokenAdmin has SecureToken."
   fi
