@@ -28,9 +28,9 @@ secureTokenAdmin="$5"
 targetUserPass="foo"
 # Leave these values as-is.
 loggedInUser=$(/usr/bin/stat -f%Su "/dev/console")
-macosMajor=$(/usr/bin/sw_vers -productVersion | /usr/bin/awk -F . '{print $1}')
-macosMinor=$(/usr/bin/sw_vers -productVersion | /usr/bin/awk -F . '{print $2}')
-macosBuild=$(/usr/bin/sw_vers -productVersion | /usr/bin/awk -F . '{print $3}')
+macOSVersionMajor=$(/usr/bin/sw_vers -productVersion | /usr/bin/awk -F . '{print $1}')
+macOSVersionMinor=$(/usr/bin/sw_vers -productVersion | /usr/bin/awk -F . '{print $2}')
+macOSVersionBuild=$(/usr/bin/sw_vers -productVersion | /usr/bin/awk -F . '{print $3}')
 
 
 
@@ -49,10 +49,10 @@ function check_jamf_pro_arguments {
 
 # Exits if macOS < 10.13.4, or exit with error if macOS ≠ 10.
 function check_macos_version {
-  if [[ "$macosMajor" -ne 10 ]]; then
+  if [[ "$macOSVersionMajor" -ne 10 ]]; then
     /bin/echo "❌ ERROR: macOS version ($(/usr/bin/sw_vers -productVersion)) unrecognized or incompatible, unable to proceed."
     exit 1
-  elif [[ "$macosMinor" -lt 13 || ( "$macosMinor" -eq 13 && "$macosBuild" -lt 4 ) ]]; then
+  elif [[ "$macOSVersionMinor" -lt 13 || ( "$macOSVersionMinor" -eq 13 && "$macOSVersionBuild" -lt 4 ) ]]; then
     /bin/echo "SecureToken is only applicable in macOS 10.13.4 or later. No action required."
     exit 0
   fi
@@ -81,7 +81,7 @@ function check_securetoken_logged_in_user {
 # (unless running macOS 10.15 or later, in which case exit with explanation).
 function check_securetoken_admin {
   if [[ $(/usr/sbin/sysadminctl -secureTokenStatus "$secureTokenAdmin" 2>&1) =~ "DISABLED" ]]; then
-    if [[ "$macosMinor" -gt 14 ]]; then
+    if [[ "$macOSVersionMinor" -gt 14 ]]; then
       /bin/echo "⚠️ Neither $secureTokenAdmin nor $loggedInUser has a SecureToken, but in macOS 10.15 or later, a SecureToken is automatically granted to the first user to enable FileVault (if no other users have SecureToken), so this may not be necessary. Try enabling FileVault for $loggedInUser. If that fails, see what other user on the system has SecureToken, and use its credentials to grant SecureToken to $loggedInUser."
       exit 0
     else
