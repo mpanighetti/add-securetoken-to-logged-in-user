@@ -38,7 +38,7 @@ macosBuild=$(/usr/bin/sw_vers -productVersion | /usr/bin/awk -F . '{print $3}')
 
 
 
-# Exit with error if any required Jamf Pro arguments are undefined.
+# Exits with error if any required Jamf Pro arguments are undefined.
 function check_jamf_pro_arguments {
   if [[ -z "$secureTokenAdmin" ]]; then
     /bin/echo "❌ ERROR: Undefined Jamf Pro argument, unable to proceed."
@@ -47,10 +47,10 @@ function check_jamf_pro_arguments {
 }
 
 
-# Exit if macOS < 10.13.4, or exit with error if macOS ≠ 10.
-function check_macos {
+# Exits if macOS < 10.13.4, or exit with error if macOS ≠ 10.
+function check_macos_version {
   if [[ "$macosMajor" -ne 10 ]]; then
-    echo "❌ ERROR: This script requires macOS 10, unable to proceed."
+    /bin/echo "❌ ERROR: macOS version ($(/usr/bin/sw_vers -productVersion)) unrecognized or incompatible, unable to proceed."
     exit 1
   elif [[ "$macosMinor" -lt 13 || ( "$macosMinor" -eq 13 && "$macosBuild" -lt 4 ) ]]; then
     /bin/echo "SecureToken is only applicable in macOS 10.13.4 or later. No action required."
@@ -59,7 +59,16 @@ function check_macos {
 }
 
 
-# Exit if $loggedInUser already has SecureToken.
+# Exits if root is the currently logged-in user, or no logged-in user is detected.
+function check_logged_in_user {
+  if [ "$loggedInUser" = "root" ] || [ -z "$loggedInUser" ]; then
+    /bin/echo "Nobody is logged in."
+    exit 0
+  fi
+}
+
+
+# Exits if $loggedInUser already has SecureToken.
 function check_securetoken_logged_in_user {
   if [[ $(/usr/sbin/sysadminctl -secureTokenStatus "$loggedInUser" 2>&1) =~ "ENABLED" ]]; then
     /bin/echo "$loggedInUser already has a SecureToken. No action required."
@@ -68,7 +77,7 @@ function check_securetoken_logged_in_user {
 }
 
 
-# Exit with error if $secureTokenAdmin does not have SecureToken
+# Exits with error if $secureTokenAdmin does not have SecureToken
 # (unless running macOS 10.15 or later, in which case exit with explanation).
 function check_securetoken_admin {
   if [[ $(/usr/sbin/sysadminctl -secureTokenStatus "$secureTokenAdmin" 2>&1) =~ "DISABLED" ]]; then
@@ -85,7 +94,7 @@ function check_securetoken_admin {
 }
 
 
-# Prompt for local password.
+# Prompts for local password.
 function local_account_password_prompt {
   targetUserPass=$(/usr/bin/osascript <<EOT
 tell application "System Events"
@@ -102,7 +111,7 @@ EOT
 }
 
 
-# Validate provided password.
+# Validates provided password.
 function local_account_password_validation {
   passwordVerify=$(/usr/bin/dscl "/Local/Default" authonly "$1" "$2" > "/dev/null" 2>&1; /bin/echo $?)
   if [[ "$passwordVerify" -eq 0 ]]; then
@@ -113,7 +122,7 @@ function local_account_password_validation {
 }
 
 
-# Add SecureToken to target user.
+# Adds SecureToken to target user.
 function securetoken_add {
   /usr/sbin/sysadminctl \
     -adminUser "$1" \
@@ -140,9 +149,10 @@ function securetoken_add {
 
 
 
-# Check exit conditions before proceeding.
+# Check script prerequisites.
 check_jamf_pro_arguments
-check_macos
+check_macos_version
+check_logged_in_user
 check_securetoken_logged_in_user
 check_securetoken_admin
 
