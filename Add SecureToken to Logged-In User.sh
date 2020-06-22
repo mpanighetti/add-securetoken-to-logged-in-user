@@ -9,8 +9,8 @@
 #                   https://github.com/mpanighetti/add-securetoken-to-logged-in-user
 #          Author:  Mario Panighetti
 #         Created:  2017-10-04
-#   Last Modified:  2020-01-20
-#         Version:  3.2.1
+#   Last Modified:  2020-06-22
+#         Version:  3.2.2
 #
 ###
 
@@ -28,6 +28,7 @@ secureTokenAdmin="$5"
 targetUserPass="foo"
 # Leave these values as-is.
 loggedInUser=$(/usr/bin/stat -f%Su "/dev/console")
+macosMajor=$(/usr/bin/sw_vers -productVersion | /usr/bin/awk -F . '{print $1}')
 macosMinor=$(/usr/bin/sw_vers -productVersion | /usr/bin/awk -F . '{print $2}')
 macosBuild=$(/usr/bin/sw_vers -productVersion | /usr/bin/awk -F . '{print $3}')
 
@@ -46,9 +47,12 @@ function check_jamf_pro_arguments {
 }
 
 
-# Exit if macOS < 10.13.4.
+# Exit if macOS < 10.13.4, or exit with error if macOS ≠ 10.
 function check_macos {
-  if [[ "$macosMinor" -lt 13 || ( "$macosMinor" -eq 13 && "$macosBuild" -lt 4 ) ]]; then
+  if [[ "$macosMajor" -ne 10 ]]; then
+    echo "❌ ERROR: This script requires macOS 10, unable to proceed."
+    exit 1
+  elif [[ "$macosMinor" -lt 13 || ( "$macosMinor" -eq 13 && "$macosBuild" -lt 4 ) ]]; then
     /bin/echo "SecureToken is only applicable in macOS 10.13.4 or later. No action required."
     exit 0
   fi
