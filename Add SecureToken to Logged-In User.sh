@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/zsh
 
 ###
 #
@@ -10,7 +10,7 @@
 #          Author:  Mario Panighetti
 #         Created:  2017-10-04
 #   Last Modified:  2020-06-22
-#         Version:  3.2.2
+#         Version:  3.3
 #
 ###
 
