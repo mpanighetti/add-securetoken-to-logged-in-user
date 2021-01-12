@@ -10,7 +10,7 @@
 #                   https://github.com/mpanighetti/add-securetoken-to-logged-in-user
 #          Author:  Mario Panighetti
 #         Created:  2017-10-04
-#   Last Modified:  2021-01-11
+#   Last Modified:  2021-01-12
 #         Version:  3.4
 #
 ###
@@ -54,7 +54,7 @@ function check_macos_version {
     echo "❌ ERROR: macOS version ($(/usr/bin/sw_vers -productVersion)) incompatible, unable to proceed."
     exit 1
   # Exit if macOS 10 < 10.13.4.
-elif [[ "$macOSVersionMajor" -eq 10 ]] && ][[ "$macOSVersionMinor" -lt 13 || ( "$macOSVersionMinor" -eq 13 && "$macOSVersionBuild" -lt 4 ) ]]; then
+elif [[ "$macOSVersionMajor" -eq 10 ]] && [[ "$macOSVersionMinor" -lt 13 || ( "$macOSVersionMinor" -eq 13 && "$macOSVersionBuild" -lt 4 ) ]]; then
     echo "SecureToken is only applicable in macOS 10.13.4 or later. No action required."
     exit 0
   fi
