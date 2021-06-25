@@ -3,14 +3,15 @@
 ###
 #
 #            Name:  Add SecureToken to Logged-In User.zsh
-#     Description:  Adds SecureToken to currently logged-in user. Prompts for
-#                   password of SecureToken admin (gets SecureToken Admin
-#                   Username from Jamf Pro script parameter) and logged-in user.
+#     Description:  Adds SecureToken to currently logged-in user to prepare
+#                   system for enabling FileVault. Prompts for password of
+#                   SecureToken admin (gets SecureToken Admin Username from Jamf
+#                   Pro script parameter) and logged-in user.
 #                   https://github.com/mpanighetti/add-securetoken-to-logged-in-user
 #          Author:  Mario Panighetti
 #         Created:  2017-10-04
-#   Last Modified:  2020-06-22
-#         Version:  3.3
+#   Last Modified:  2021-01-12
+#         Version:  3.4
 #
 ###
 
@@ -20,13 +21,12 @@
 
 
 
-# Local admin account with SecureToken access.
 # Jamf Pro script parameter: "SecureToken Admin Username"
+# Local admin account with SecureToken access.
 secureTokenAdmin="$5"
 # Need a default password value so the initial logic loops will properly fail
-# when validating password.
+# when validating passwords.
 targetUserPass="foo"
-# Leave these values as-is.
 loggedInUser=$(/usr/bin/stat -f%Su "/dev/console")
 macOSVersionMajor=$(/usr/bin/sw_vers -productVersion | /usr/bin/awk -F . '{print $1}')
 macOSVersionMinor=$(/usr/bin/sw_vers -productVersion | /usr/bin/awk -F . '{print $2}')
@@ -41,19 +41,21 @@ macOSVersionBuild=$(/usr/bin/sw_vers -productVersion | /usr/bin/awk -F . '{print
 # Exits with error if any required Jamf Pro arguments are undefined.
 function check_jamf_pro_arguments {
   if [[ -z "$secureTokenAdmin" ]]; then
-    /bin/echo "❌ ERROR: Undefined Jamf Pro argument, unable to proceed."
+    echo "❌ ERROR: Undefined Jamf Pro argument, unable to proceed."
     exit 74
   fi
 }
 
 
-# Exits if macOS < 10.13.4, or exit with error if macOS ≠ 10.
+# Exits if macOS version does not meet script requirements.
 function check_macos_version {
-  if [[ "$macOSVersionMajor" -ne 10 ]]; then
-    /bin/echo "❌ ERROR: macOS version ($(/usr/bin/sw_vers -productVersion)) unrecognized or incompatible, unable to proceed."
+  # Exit with error if macOS < 10.
+  if [[ "$macOSVersionMajor" -lt 10 ]]; then
+    echo "❌ ERROR: macOS version ($(/usr/bin/sw_vers -productVersion)) incompatible, unable to proceed."
     exit 1
-  elif [[ "$macOSVersionMinor" -lt 13 || ( "$macOSVersionMinor" -eq 13 && "$macOSVersionBuild" -lt 4 ) ]]; then
-    /bin/echo "SecureToken is only applicable in macOS 10.13.4 or later. No action required."
+  # Exit if macOS 10 < 10.13.4.
+elif [[ "$macOSVersionMajor" -eq 10 ]] && [[ "$macOSVersionMinor" -lt 13 || ( "$macOSVersionMinor" -eq 13 && "$macOSVersionBuild" -lt 4 ) ]]; then
+    echo "SecureToken is only applicable in macOS 10.13.4 or later. No action required."
     exit 0
   fi
 }
@@ -62,7 +64,7 @@ function check_macos_version {
 # Exits if root is the currently logged-in user, or no logged-in user is detected.
 function check_logged_in_user {
   if [ "$loggedInUser" = "root" ] || [ -z "$loggedInUser" ]; then
-    /bin/echo "Nobody is logged in."
+    echo "Nobody is logged in."
     exit 0
   fi
 }
@@ -71,7 +73,7 @@ function check_logged_in_user {
 # Exits if $loggedInUser already has SecureToken.
 function check_securetoken_logged_in_user {
   if [[ $(/usr/sbin/sysadminctl -secureTokenStatus "$loggedInUser" 2>&1) =~ "ENABLED" ]]; then
-    /bin/echo "$loggedInUser already has a SecureToken. No action required."
+    echo "$loggedInUser already has a SecureToken. No action required."
     exit 0
   fi
 }
@@ -81,15 +83,15 @@ function check_securetoken_logged_in_user {
 # (unless running macOS 10.15 or later, in which case exit with explanation).
 function check_securetoken_admin {
   if [[ $(/usr/sbin/sysadminctl -secureTokenStatus "$secureTokenAdmin" 2>&1) =~ "DISABLED" ]]; then
-    if [[ "$macOSVersionMinor" -gt 14 ]]; then
-      /bin/echo "⚠️ Neither $secureTokenAdmin nor $loggedInUser has a SecureToken, but in macOS 10.15 or later, a SecureToken is automatically granted to the first user to enable FileVault (if no other users have SecureToken), so this may not be necessary. Try enabling FileVault for $loggedInUser. If that fails, see what other user on the system has SecureToken, and use its credentials to grant SecureToken to $loggedInUser."
+    if [[ "$macOSVersionMajor" -gt 10 || ( "$macOSVersionMajor" -eq 10 && "$macOSVersionMinor" -gt 14 ) ]]; then
+      echo "⚠️ Neither $secureTokenAdmin nor $loggedInUser has a SecureToken, but in macOS 10.15 or later, a SecureToken is automatically granted to the first user to enable FileVault (if no other users have SecureToken), so this may not be necessary. Try enabling FileVault for $loggedInUser. If that fails, see what other user on the system has SecureToken, and use its credentials to grant SecureToken to $loggedInUser."
       exit 0
     else
-      /bin/echo "❌ ERROR: $secureTokenAdmin does not have a valid SecureToken, unable to proceed. Please update Jamf Pro policy to target another admin user with SecureToken."
+      echo "❌ ERROR: $secureTokenAdmin does not have a valid SecureToken, unable to proceed. Please update Jamf Pro policy to target another admin user with SecureToken."
       exit 1
     fi
   else
-    /bin/echo "✅ Verified $secureTokenAdmin has SecureToken."
+    echo "✅ Verified $secureTokenAdmin has SecureToken."
   fi
 }
 
@@ -105,7 +107,7 @@ set myReply to user_password
 EOT
   )
   if [[ "$targetUserPass" = "" ]]; then
-    /bin/echo "❌ ERROR: A password was not entered for $1, unable to proceed. Please rerun policy; if issue persists, a manual SecureToken add will be required to continue."
+    echo "❌ ERROR: A password was not entered for $1, unable to proceed. Please rerun policy; if issue persists, a manual SecureToken add will be required to continue."
     exit 1
   fi
 }
@@ -113,11 +115,11 @@ EOT
 
 # Validates provided password.
 function local_account_password_validation {
-  passwordVerify=$(/usr/bin/dscl "/Local/Default" authonly "$1" "$2" > "/dev/null" 2>&1; /bin/echo $?)
+  passwordVerify=$(/usr/bin/dscl "/Local/Default" authonly "$1" "$2" > "/dev/null" 2>&1; echo $?)
   if [[ "$passwordVerify" -eq 0 ]]; then
-    /bin/echo "✅ Password successfully validated for $1."
+    echo "✅ Password successfully validated for $1."
   else
-    /bin/echo "❌ ERROR: Failed password validation for $1. Please reenter the password when prompted."
+    echo "❌ ERROR: Failed password validation for $1. Please reenter the password when prompted."
   fi
 }
 
@@ -133,12 +135,12 @@ function securetoken_add {
   # Verify successful SecureToken add.
   secureTokenCheck=$(/usr/sbin/sysadminctl -secureTokenStatus "$3" 2>&1)
   if [[ "$secureTokenCheck" =~ "DISABLED" ]]; then
-    /bin/echo "❌ ERROR: Failed to add SecureToken to $3. Please rerun policy; if issue persists, a manual SecureToken add will be required to continue."
+    echo "❌ ERROR: Failed to add SecureToken to $3. Please rerun policy; if issue persists, a manual SecureToken add will be required to continue."
     exit 126
   elif [[ "$secureTokenCheck" =~ "ENABLED" ]]; then
-    /bin/echo "SecureToken add successful."
+    echo "SecureToken add successful."
   else
-    /bin/echo "❌ ERROR: Unexpected result, unable to proceed. Please rerun policy; if issue persists, a manual SecureToken add will be required to continue."
+    echo "❌ ERROR: Unexpected result, unable to proceed. Please rerun policy; if issue persists, a manual SecureToken add will be required to continue."
     exit 1
   fi
 }
@@ -161,15 +163,15 @@ check_securetoken_admin
 while [[ $(/usr/sbin/sysadminctl -secureTokenStatus "$loggedInUser" 2>&1) =~ "DISABLED" ]]; do
 
   # Get $secureTokenAdmin password.
-  /bin/echo "$loggedInUser missing SecureToken, prompting for credentials..."
-  while [[ $(/usr/bin/dscl "/Local/Default" authonly "$secureTokenAdmin" "$targetUserPass" > "/dev/null" 2>&1; /bin/echo $?) -ne 0 ]]; do
+  echo "$loggedInUser missing SecureToken, prompting for credentials..."
+  while [[ $(/usr/bin/dscl "/Local/Default" authonly "$secureTokenAdmin" "$targetUserPass" > "/dev/null" 2>&1; echo $?) -ne 0 ]]; do
     local_account_password_prompt "$secureTokenAdmin" ". User's credentials are needed to grant a SecureToken to $loggedInUser."
     local_account_password_validation "$secureTokenAdmin" "$targetUserPass"
   done
   secureTokenAdminPass="$targetUserPass"
 
   # Get $loggedInUser password.
-  while [[ $(/usr/bin/dscl "/Local/Default" authonly "$loggedInUser" "$targetUserPass" > "/dev/null" 2>&1; /bin/echo $?) -ne 0 ]]; do
+  while [[ $(/usr/bin/dscl "/Local/Default" authonly "$loggedInUser" "$targetUserPass" > "/dev/null" 2>&1; echo $?) -ne 0 ]]; do
     local_account_password_prompt "$loggedInUser" " to add SecureToken."
     local_account_password_validation "$loggedInUser" "$targetUserPass"
   done
@@ -182,7 +184,7 @@ done
 
 
 # Echo successful result.
-/bin/echo "✅ Verified SecureToken is enabled for $loggedInUser."
+echo "✅ Verified SecureToken is enabled for $loggedInUser."
 
 
 
