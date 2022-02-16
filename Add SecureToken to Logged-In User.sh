@@ -10,8 +10,8 @@
 #                   https://github.com/mpanighetti/add-securetoken-to-logged-in-user
 #          Author:  Mario Panighetti
 #         Created:  2017-10-04
-#   Last Modified:  2022-02-08
-#         Version:  4.0
+#   Last Modified:  2022-02-14
+#         Version:  4.0.1
 #
 ###
 
@@ -103,14 +103,7 @@ check_securetoken_admin () {
 
 # Prompts for local password.
 local_account_password_prompt () {
-  targetUserPass=$(/usr/bin/osascript <<EOT
-tell application "System Events"
-  activate
-  set user_password to text returned of (display dialog "Please enter password for ${1}${2}" default answer "" with hidden answer)
-end tell
-set myReply to user_password
-EOT
-  )
+  targetUserPass=$(/usr/bin/osascript -e "set user_password to text returned of (display dialog \"${passwordPromptDialog}\" default answer \"\" with hidden answer)")
   if [ -z "$targetUserPass" ]; then
     echo "❌ ERROR: A password was not entered for ${1}, unable to proceed. Please rerun policy; if issue persists, a manual SecureToken add will be required to continue."
     exit 1
@@ -169,14 +162,16 @@ until /usr/sbin/sysadminctl -secureTokenStatus "$loggedInUser" 2>&1 | /usr/bin/g
   # Get $secureTokenAdmin password.
   echo "${loggedInUser} missing SecureToken, prompting for credentials..."
   until /usr/bin/dscl "/Local/Default" authonly "$secureTokenAdmin" "$targetUserPass" > "/dev/null" 2>&1; do
-    local_account_password_prompt "$secureTokenAdmin" ". User's credentials are needed to grant a SecureToken to $loggedInUser."
+    passwordPromptDialog="Please enter password for ${secureTokenAdmin}. User's credentials are needed to grant a SecureToken to ${loggedInUser}."
+    local_account_password_prompt "$secureTokenAdmin"
     local_account_password_validation "$secureTokenAdmin" "$targetUserPass"
   done
   secureTokenAdminPass="$targetUserPass"
 
   # Get $loggedInUser password.
   until /usr/bin/dscl "/Local/Default" authonly "$loggedInUser" "$targetUserPass" > "/dev/null" 2>&1; do
-    local_account_password_prompt "$loggedInUser" " to add SecureToken."
+    passwordPromptDialog="Please enter password for ${loggedInUser} to add SecureToken."
+    local_account_password_prompt "$loggedInUser"
     local_account_password_validation "$loggedInUser" "$targetUserPass"
   done
   loggedInUserPass="$targetUserPass"
