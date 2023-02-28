@@ -4,9 +4,9 @@
 #
 #            Name:  Add SecureToken to Logged-In User.sh
 #     Description:  Adds SecureToken to currently logged-in user to prepare system for
-#					enabling FileVault. Prompts for password of SecureToken admin (gets
-#					SecureToken Admin Username from Jamf Pro script parameter) and
-#					logged-in user.
+#                   enabling FileVault. Prompts for password of SecureToken admin (gets
+#                   SecureToken Admin Username from Jamf Pro script parameter) and
+#                   logged-in user.
 #                   https://github.com/mpanighetti/add-securetoken-to-logged-in-user
 #          Author:  Mario Panighetti
 #         Created:  2017-10-04
