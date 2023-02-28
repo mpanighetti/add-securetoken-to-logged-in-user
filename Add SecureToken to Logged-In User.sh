@@ -3,15 +3,15 @@
 ###
 #
 #            Name:  Add SecureToken to Logged-In User.sh
-#     Description:  Adds SecureToken to currently logged-in user to prepare
-#                   system for enabling FileVault. Prompts for password of
-#                   SecureToken admin (gets SecureToken Admin Username from Jamf
-#                   Pro script parameter) and logged-in user.
+#     Description:  Adds SecureToken to currently logged-in user to prepare system for
+#                   enabling FileVault. Prompts for password of SecureToken admin (gets
+#                   SecureToken Admin Username from Jamf Pro script parameter) and
+#                   logged-in user.
 #                   https://github.com/mpanighetti/add-securetoken-to-logged-in-user
 #          Author:  Mario Panighetti
 #         Created:  2017-10-04
-#   Last Modified:  2022-02-14
-#         Version:  4.0.1
+#   Last Modified:  2023-02-27
+#         Version:  4.0.2
 #
 ###
 
@@ -24,13 +24,14 @@
 # Jamf Pro script parameter: "SecureToken Admin Username"
 # A local administrator account with SecureToken access.
 secureTokenAdmin="${5}"
-# Need a default password value so the initial logic loops will properly fail
-# when validating passwords.
-targetUserPass="foo"
 loggedInUser=$(/usr/bin/stat -f%Su "/dev/console")
 macOSVersionMajor=$(/usr/bin/sw_vers -productVersion | /usr/bin/awk -F . '{print $1}')
 macOSVersionMinor=$(/usr/bin/sw_vers -productVersion | /usr/bin/awk -F . '{print $2}')
 macOSVersionBuild=$(/usr/bin/sw_vers -productVersion | /usr/bin/awk -F . '{print $3}')
+# Need default password values so the initial logic loops will properly fail when validating passwords. You can store the actual credentials here to skip password prompts entirely, but for security reasons this is not generally recommended. Please don't actually use "foo" as a password, for so many reasons.
+secureTokenAdminPass="foo"
+loggedInUserPass="foo"
+passwordPrompt="foo"
 
 
 
@@ -84,8 +85,7 @@ check_securetoken_logged_in_user () {
 }
 
 
-# Exits with error if $secureTokenAdmin does not have SecureToken
-# (unless running macOS 10.15 or later, in which case exit with explanation).
+# Exits with error if $secureTokenAdmin does not have SecureToken (unless running macOS 10.15 or later, in which case exit with explanation).
 check_securetoken_admin () {
   if /usr/sbin/sysadminctl -secureTokenStatus "$secureTokenAdmin" 2>&1 | /usr/bin/grep -q "DISABLED" ; then
     if [ "$macOSVersionMajor" -gt 10 ] || [ "$macOSVersionMajor" -eq 10 ] && [ "$macOSVersionMinor" -gt 14 ]; then
@@ -103,8 +103,8 @@ check_securetoken_admin () {
 
 # Prompts for local password.
 local_account_password_prompt () {
-  targetUserPass=$(/usr/bin/osascript -e "set user_password to text returned of (display dialog \"${passwordPromptDialog}\" default answer \"\" with hidden answer)")
-  if [ -z "$targetUserPass" ]; then
+  passwordPrompt=$(/usr/bin/osascript -e "set user_password to text returned of (display dialog \"${2}\" default answer \"\" with hidden answer)")
+  if [ -z "$passwordPrompt" ]; then
     echo "❌ ERROR: A password was not entered for ${1}, unable to proceed. Please rerun policy; if issue persists, a manual SecureToken add will be required to continue."
     exit 1
   fi
@@ -124,10 +124,10 @@ local_account_password_validation () {
 # Adds SecureToken to target user.
 securetoken_add () {
   /usr/sbin/sysadminctl \
-    -adminUser "$1" \
-    -adminPassword "$2" \
-    -secureTokenOn "$3" \
-    -password "$4"
+    -adminUser "${1}" \
+    -adminPassword "${2}" \
+    -secureTokenOn "${3}" \
+    -password "${4}"
 
   # Verify successful SecureToken add.
   secureTokenCheck=$(/usr/sbin/sysadminctl -secureTokenStatus "${3}" 2>&1)
@@ -161,20 +161,18 @@ until /usr/sbin/sysadminctl -secureTokenStatus "$loggedInUser" 2>&1 | /usr/bin/g
 
   # Get $secureTokenAdmin password.
   echo "${loggedInUser} missing SecureToken, prompting for credentials..."
-  until /usr/bin/dscl "/Local/Default" authonly "$secureTokenAdmin" "$targetUserPass" > "/dev/null" 2>&1; do
-    passwordPromptDialog="Please enter password for ${secureTokenAdmin}. User's credentials are needed to grant a SecureToken to ${loggedInUser}."
-    local_account_password_prompt "$secureTokenAdmin"
-    local_account_password_validation "$secureTokenAdmin" "$targetUserPass"
+  until /usr/bin/dscl "/Local/Default" authonly "$secureTokenAdmin" "$secureTokenAdminPass" > "/dev/null" 2>&1; do
+    local_account_password_prompt "$secureTokenAdmin" "Please enter password for ${secureTokenAdmin}. User's credentials are needed to grant a SecureToken to ${loggedInUser}."
+    secureTokenAdminPass="$passwordPrompt"
+    local_account_password_validation "$secureTokenAdmin" "$secureTokenAdminPass"
   done
-  secureTokenAdminPass="$targetUserPass"
 
   # Get $loggedInUser password.
-  until /usr/bin/dscl "/Local/Default" authonly "$loggedInUser" "$targetUserPass" > "/dev/null" 2>&1; do
-    passwordPromptDialog="Please enter password for ${loggedInUser} to add SecureToken."
-    local_account_password_prompt "$loggedInUser"
-    local_account_password_validation "$loggedInUser" "$targetUserPass"
+  until /usr/bin/dscl "/Local/Default" authonly "$loggedInUser" "$loggedInUserPass" > "/dev/null" 2>&1; do
+    local_account_password_prompt "$loggedInUser" "Please enter password for ${loggedInUser} to add SecureToken."
+    loggedInUserPass="$passwordPrompt"
+    local_account_password_validation "$loggedInUser" "$loggedInUserPass"
   done
-  loggedInUserPass="$targetUserPass"
 
   # Add SecureToken using provided credentials.
   securetoken_add "$secureTokenAdmin" "$secureTokenAdminPass" "$loggedInUser" "$loggedInUserPass"
