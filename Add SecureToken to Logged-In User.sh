@@ -103,7 +103,7 @@ check_securetoken_admin () {
 
 # Prompts for local password.
 local_account_password_prompt () {
-  passwordPrompt=$(/usr/bin/osascript -e "set user_password to text returned of (display dialog \"${passwordPromptDialog}\" default answer \"\" with hidden answer)")
+  passwordPrompt=$(/usr/bin/osascript -e "set user_password to text returned of (display dialog \"${2}\" default answer \"\" with hidden answer)")
   if [ -z "$passwordPrompt" ]; then
     echo "❌ ERROR: A password was not entered for ${1}, unable to proceed. Please rerun policy; if issue persists, a manual SecureToken add will be required to continue."
     exit 1
@@ -162,19 +162,17 @@ until /usr/sbin/sysadminctl -secureTokenStatus "$loggedInUser" 2>&1 | /usr/bin/g
   # Get $secureTokenAdmin password.
   echo "${loggedInUser} missing SecureToken, prompting for credentials..."
   until /usr/bin/dscl "/Local/Default" authonly "$secureTokenAdmin" "$secureTokenAdminPass" > "/dev/null" 2>&1; do
-    passwordPromptDialog="Please enter password for ${secureTokenAdmin}. User's credentials are needed to grant a SecureToken to ${loggedInUser}."
-    local_account_password_prompt "$secureTokenAdmin"
-    local_account_password_validation "$secureTokenAdmin" "$passwordPrompt"
+    local_account_password_prompt "$secureTokenAdmin" "Please enter password for ${secureTokenAdmin}. User's credentials are needed to grant a SecureToken to ${loggedInUser}."
+    secureTokenAdminPass="$passwordPrompt"
+    local_account_password_validation "$secureTokenAdmin" "$secureTokenAdminPass"
   done
-  secureTokenAdminPass="$passwordPrompt"
 
   # Get $loggedInUser password.
   until /usr/bin/dscl "/Local/Default" authonly "$loggedInUser" "$loggedInUserPass" > "/dev/null" 2>&1; do
-    passwordPromptDialog="Please enter password for ${loggedInUser} to add SecureToken."
-    local_account_password_prompt "$loggedInUser"
-    local_account_password_validation "$loggedInUser" "$passwordPrompt"
+    local_account_password_prompt "$loggedInUser" "Please enter password for ${loggedInUser} to add SecureToken."
+    loggedInUserPass="$passwordPrompt"
+    local_account_password_validation "$loggedInUser" "$loggedInUserPass"
   done
-  loggedInUserPass="$passwordPrompt"
 
   # Add SecureToken using provided credentials.
   securetoken_add "$secureTokenAdmin" "$secureTokenAdminPass" "$loggedInUser" "$loggedInUserPass"
